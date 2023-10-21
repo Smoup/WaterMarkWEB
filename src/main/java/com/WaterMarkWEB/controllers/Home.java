@@ -30,10 +30,18 @@ public class Home {
             @RequestParam(value = "useDefaultWatermark", required = false) String useDefaultWatermark,
             Model model) {
 
-        if (file.isEmpty()) {
+        if (file.isEmpty() || file.getOriginalFilename() == null) {
             model.addAttribute("errorMessage", "Please attach an image");
             return "home";
         }
+
+        var oName = file.getOriginalFilename();
+        if (!oName.endsWith(".jpg") && !oName.endsWith(".jpeg") && !oName.endsWith(".png")) {
+            model.addAttribute("errorMessage", "Please use only .jpeg .jpg .png");
+            return "home";
+        }
+
+
 
         if ((watermark == null || watermark.isEmpty()) &&
                 (useDefaultWatermark == null || !useDefaultWatermark.equals("on"))) {
@@ -49,6 +57,11 @@ public class Home {
 
             File watermarkFile = null;
             if (watermark != null && !watermark.isEmpty()) {
+                var watermarkN = watermark.getOriginalFilename();
+                if (!watermarkN.endsWith(".jpg") && !watermarkN.endsWith(".jpeg") && !watermarkN.endsWith(".png")) {
+                    model.addAttribute("errorMessage", "Please use only .jpeg .jpg .png");
+                    return "home";
+                }
                 watermarkFile = File.createTempFile("watermark", ".png");
                 watermark.transferTo(watermarkFile);
             }

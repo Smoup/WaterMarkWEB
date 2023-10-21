@@ -1,9 +1,11 @@
 package com.WaterMarkWEB.controllers;
 
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.io.File;
@@ -14,40 +16,28 @@ import java.io.IOException;
 public class Download {
 
     @GetMapping("/download")
-    public String downloadImage(HttpServletResponse response, Model model) {
-        try (var os = response.getOutputStream()) {
-            final var projectRootPath = System.getProperty("user.dir");
-            final var filePath = projectRootPath + "/temp-image-file.png";
+    public ResponseEntity<byte[]> downloadImage() {
+        final var projectRootPath = System.getProperty("user.dir");
+        final var filePath = projectRootPath + "/temp-image-file.png";
 
-            var imageFile = new File(filePath);
+        var imageFile = new File(filePath);
 
-            if (!imageFile.exists()) {
-                model.addAttribute("errorMessage", "Image not found");
-                return "home";
-            }
-
-            response.setContentType("image/png");
-            response.setHeader("Content-Disposition", "attachment; filename=watermarked-image.png");
-
-            sendFile(imageFile, os);
-        } catch (IOException e) {
-            e.printStackTrace();
-            model.addAttribute("errorMessage", "Error downloading image");
-            return "home";
+        if (!imageFile.exists()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
-        return null;
-    }
 
-    private static void sendFile(File imageFile, ServletOutputStream os) {
-        try (var fis = new FileInputStream(imageFile)) {
-            var buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = fis.read(buffer)) != -1) {
-                os.write(buffer, 0, bytesRead);
-            }
-            os.flush();
+        try {
+            var fis = new FileInputStream(imageFile);
+            var bytes = IOUtils.toByteArray(fis);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentDispositionFormData("attachment", "watermarked-image.png");
+
+            return ResponseEntity.ok().headers(headers).body(bytes);
         } catch (IOException e) {
             e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }
